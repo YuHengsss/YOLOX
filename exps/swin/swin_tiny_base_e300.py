@@ -9,14 +9,13 @@ class Exp(MyExp):
         super(Exp, self).__init__()
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
         self.data_dir = '/mnt/truenas/scratch/hzh_hb3/datasets/coco/coco' #'/mnt/weka/scratch/datasets/coco' #
-        self.basic_lr_per_img = 0.001 / 36.0
+        self.basic_lr_per_img = 0.0001 / 16.0
         self.save_history_ckpt = False
-        self.min_lr_ratio = 0.05
+        self.min_lr_ratio = 0.01
         self.weight_decay = 0.05
-        self.warmup_epochs = 1
-        self.max_epoch = 36
-        self.eval_interval = 2
-        self.no_aug_epochs = 5
+        self.max_epoch = 100
+        self.eval_interval = 5
+        self.no_aug_epochs = 10
 
     def get_model(self):
         def init_yolo(M):

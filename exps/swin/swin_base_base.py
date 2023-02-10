@@ -8,15 +8,14 @@ class Exp(MyExp):
     def __init__(self):
         super(Exp, self).__init__()
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
-        self.data_dir = '/mnt/truenas/scratch/hzh_hb3/datasets/coco/coco' #'/mnt/weka/scratch/datasets/coco' #
-        self.basic_lr_per_img = 0.001 / 36.0
+        self.data_dir = '/mnt/truenas/scratch/hzh_hb3/datasets/coco/coco'  # '/mnt/weka/scratch/datasets/coco' #
+        self.basic_lr_per_img = 0.0001 / 24.0
         self.save_history_ckpt = False
-        self.min_lr_ratio = 0.05
+        self.min_lr_ratio = 0.01
         self.weight_decay = 0.05
-        self.warmup_epochs = 1
-        self.max_epoch = 36
-        self.eval_interval = 2
-        self.no_aug_epochs = 5
+        self.max_epoch = 100
+        self.eval_interval = 5
+        self.no_aug_epochs = 10
 
     def get_model(self):
         def init_yolo(M):
@@ -25,10 +24,17 @@ class Exp(MyExp):
                     m.eps = 1e-3
                     m.momentum = 0.03
 
-        in_channels = [192, 384, 768]
-        out_channels = [192, 384, 768]
+        in_channels = [256, 512, 1024]
+        out_channels = [256, 512, 1024]
         from yolox.models import YOLOX, YOLOPAFPN_Swin, YOLOXHead
-        backbone = YOLOPAFPN_Swin(in_channels=in_channels, out_channels=out_channels, act=self.act,in_features=(1,2,3))
+        backbone = YOLOPAFPN_Swin(in_channels=in_channels,
+                                  out_channels=out_channels,
+                                  act=self.act,
+                                  in_features=(1, 2, 3),
+                                  swin_depth=[2, 2, 18, 2],
+                                  num_heads=[4, 8, 16, 32],
+                                  base_dim=int(in_channels[0]/2)
+                                  )
         head = YOLOXHead(self.num_classes, self.width, in_channels=out_channels, act=self.act)
         self.model = YOLOX(backbone, head)
 
@@ -44,20 +50,21 @@ class Exp(MyExp):
             else:
                 lr = self.basic_lr_per_img * batch_size
 
-            pg0, pg1, pg2,pg3 = [], [], [], []  # optimizer parameter groups
+            pg0, pg1, pg2, pg3 = [], [], [], []  # optimizer parameter groups
 
             for k, v in self.model.named_modules():
                 if hasattr(v, "bias") and isinstance(v.bias, nn.Parameter):
                     pg2.append(v.bias)  # biases
                 if isinstance(v, nn.BatchNorm2d) or "bn" in k:
                     pg0.append(v.weight)  # no decay
-                elif hasattr(v,'absolute_pos_embed') or hasattr(v,'relative_position_bias_table') or hasattr(v,'norm'):
-                    if hasattr(v,'weight'):
+                elif hasattr(v, 'absolute_pos_embed') or hasattr(v, 'relative_position_bias_table') or hasattr(v,
+                                                                                                               'norm'):
+                    if hasattr(v, 'weight'):
                         pg3.append(v.weight)
                 elif hasattr(v, "weight") and isinstance(v.weight, nn.Parameter):
                     pg1.append(v.weight)  # apply decay
 
-            optimizer = torch.optim.AdamW(params=pg0,lr=lr,weight_decay=self.weight_decay)
+            optimizer = torch.optim.AdamW(params=pg0, lr=lr, weight_decay=self.weight_decay)
             optimizer.add_param_group(
                 {"params": pg1, "weight_decay": self.weight_decay}
             )  # add pg1 with weight_decay

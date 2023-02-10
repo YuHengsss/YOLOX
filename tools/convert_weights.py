@@ -19,7 +19,9 @@ def main(args):
     for key in state_dict.keys():
         name2 = key
         w = state_dict[key]
-        if name2.split('.')[0] == 'head':continue
+        if name2.split('.')[0] == 'head':
+            print(name2)
+            continue
         if 'backbone.backbone.' not in name2:
             if name2.split('.')[0] != 'norm':
                 name2 = 'backbone.backbone.' + name2

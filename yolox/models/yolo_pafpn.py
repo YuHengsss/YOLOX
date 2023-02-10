@@ -128,13 +128,16 @@ class YOLOPAFPN_Swin(nn.Module):
         width=1,
         depth = 1,
         in_features=(3,4,5),
-        in_channels=[512, 1024, 2048],
+        in_channels=[256, 512, 1024],
         out_channels=[256, 512, 1024],
+        swin_depth =[2, 2, 6, 2],
+        num_heads=[3, 6, 12, 24],
+        base_dim = 96,
         depthwise=False,
-        act="relu",
+        act="silu",
     ):
         super().__init__()
-        self.backbone = SwinTransformer(out_indices=in_features)
+        self.backbone = SwinTransformer(out_indices=in_features,depths=swin_depth,num_heads=num_heads, embed_dim=base_dim)
         self.in_features = in_features
         self.in_channels = in_channels
         Conv = DWConv if depthwise else BaseConv
